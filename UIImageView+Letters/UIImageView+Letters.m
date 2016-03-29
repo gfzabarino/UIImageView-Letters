@@ -27,12 +27,6 @@
 // This multiplier sets the font size based on the view bounds
 static const CGFloat kFontResizingProportion = 0.42f;
 
-@interface UIImageView (LettersPrivate)
-
-- (UIImage *)imageSnapshotFromText:(NSString *)text backgroundColor:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)attributes;
-
-@end
-
 @implementation UIImageView (Letters)
 
 - (void)setImageWithString:(NSString *)string {
@@ -135,14 +129,22 @@ static const CGFloat kFontResizingProportion = 0.42f;
 }
 
 - (UIImage *)imageSnapshotFromText:(NSString *)text backgroundColor:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes {
-    
+    return [[self class] imageSnapshotFromText:text
+                               backgroundColor:color
+                                      circular:isCircular
+                                textAttributes:textAttributes
+                                        bounds:self.bounds
+                                   contentMode:self.contentMode];
+}
+
++ (UIImage *)imageSnapshotFromText:(NSString *)text backgroundColor:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes bounds:(CGRect)bounds contentMode:(UIViewContentMode)contentMode {
     CGFloat scale = [UIScreen mainScreen].scale;
     
-    CGSize size = self.bounds.size;
-    if (self.contentMode == UIViewContentModeScaleToFill ||
-        self.contentMode == UIViewContentModeScaleAspectFill ||
-        self.contentMode == UIViewContentModeScaleAspectFit ||
-        self.contentMode == UIViewContentModeRedraw)
+    CGSize size = bounds.size;
+    if (contentMode == UIViewContentModeScaleToFill ||
+        contentMode == UIViewContentModeScaleAspectFill ||
+        contentMode == UIViewContentModeScaleAspectFit ||
+        contentMode == UIViewContentModeRedraw)
     {
         size.width = floorf(size.width * scale) / scale;
         size.height = floorf(size.height * scale) / scale;
@@ -156,7 +158,7 @@ static const CGFloat kFontResizingProportion = 0.42f;
         //
         // Clip context to a circle
         //
-        CGPathRef path = CGPathCreateWithEllipseInRect(self.bounds, NULL);
+        CGPathRef path = CGPathCreateWithEllipseInRect(bounds, NULL);
         CGContextAddPath(context, path);
         CGContextClip(context);
         CGPathRelease(path);
@@ -172,7 +174,6 @@ static const CGFloat kFontResizingProportion = 0.42f;
     // Draw text in the context
     //
     CGSize textSize = [text sizeWithAttributes:textAttributes];
-    CGRect bounds = self.bounds;
     
     [text drawInRect:CGRectMake(bounds.size.width/2 - textSize.width/2,
                                 bounds.size.height/2 - textSize.height/2,

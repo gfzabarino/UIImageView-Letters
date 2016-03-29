@@ -74,4 +74,16 @@
  */
 - (void)setImageWithString:(NSString *)string color:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes;
 
+- (UIImage *)imageSnapshotFromText:(NSString *)text
+                   backgroundColor:(UIColor *)color
+                          circular:(BOOL)isCircular
+                    textAttributes:(NSDictionary *)attributes;
+
++ (UIImage *)imageSnapshotFromText:(NSString *)text
+                   backgroundColor:(UIColor *)color
+                          circular:(BOOL)isCircular
+                    textAttributes:(NSDictionary *)textAttributes
+                            bounds:(CGRect)bounds
+                       contentMode:(UIViewContentMode)contentMode;
+
 @end
