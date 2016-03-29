@@ -29,74 +29,45 @@ static const CGFloat kFontResizingProportion = 0.42f;
 
 @implementation UIImageView (Letters)
 
-- (void)setImageWithString:(NSString *)string {
-    [self setImageWithString:string color:nil circular:NO textAttributes:nil];
+- (void)ivl_setImageWithString:(NSString *)string {
+    [self ivl_setImageWithString:string color:nil circular:NO textAttributes:nil];
 }
 
-- (void)setImageWithString:(NSString *)string color:(UIColor *)color {
-    [self setImageWithString:string color:color circular:NO textAttributes:nil];
+- (void)ivl_setImageWithString:(NSString *)string color:(UIColor *)color {
+    [self ivl_setImageWithString:string color:color circular:NO textAttributes:nil];
 }
 
-- (void)setImageWithString:(NSString *)string color:(UIColor *)color circular:(BOOL)isCircular {
-    [self setImageWithString:string color:color circular:isCircular textAttributes:nil];
+- (void)ivl_setImageWithString:(NSString *)string color:(UIColor *)color circular:(BOOL)isCircular {
+    [self ivl_setImageWithString:string color:color circular:isCircular textAttributes:nil];
 }
 
-- (void)setImageWithString:(NSString *)string color:(UIColor *)color circular:(BOOL)isCircular fontName:(NSString *)fontName {
-    [self setImageWithString:string color:color circular:isCircular textAttributes:@{
-                                                                                     NSFontAttributeName:[self fontForFontName:fontName],
+- (void)ivl_setImageWithString:(NSString *)string color:(UIColor *)color circular:(BOOL)isCircular fontName:(NSString *)fontName {
+    [self ivl_setImageWithString:string color:color circular:isCircular textAttributes:@{
+                                                                                     NSFontAttributeName:[[self class] ivl_fontForFontName:fontName size:self.bounds.size],
                                                                                      NSForegroundColorAttributeName: [UIColor whiteColor]
                                                                                      }];
 }
 
-- (void)setImageWithString:(NSString *)string color:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes {
+- (void)ivl_setImageWithString:(NSString *)string color:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes {
     if (!textAttributes) {
-        textAttributes = @{
-                           NSFontAttributeName: [self fontForFontName:nil],
-                           NSForegroundColorAttributeName: [UIColor whiteColor]
-                           };
+        textAttributes = [[self class] ivl_defaultTextAttributesForSize:self.bounds.size];
     }
     
-    NSMutableString *displayString = [NSMutableString stringWithString:@""];
-    
-    NSMutableArray *words = [[string componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] mutableCopy];
-    
-    //
-    // Get first letter of the first and last word
-    //
-    if ([words count]) {
-        NSString *firstWord = [words firstObject];
-        if ([firstWord length]) {
-            // Get character range to handle emoji (emojis consist of 2 characters in sequence)
-            NSRange firstLetterRange = [firstWord rangeOfComposedCharacterSequencesForRange:NSMakeRange(0, 1)];
-            [displayString appendString:[firstWord substringWithRange:firstLetterRange]];
-        }
-        
-        if ([words count] >= 2) {
-            NSString *lastWord = [words lastObject];
-            
-            while ([lastWord length] == 0 && [words count] >= 2) {
-                [words removeLastObject];
-                lastWord = [words lastObject];
-            }
-            
-            if ([words count] > 1) {
-                // Get character range to handle emoji (emojis consist of 2 characters in sequence)
-                NSRange lastLetterRange = [lastWord rangeOfComposedCharacterSequencesForRange:NSMakeRange(0, 1)];
-                [displayString appendString:[lastWord substringWithRange:lastLetterRange]];
-            }
-        }
-    }
-    
-    UIColor *backgroundColor = color ? color : [self randomColor];
+    UIColor *backgroundColor = color ? color : [[self class] ivl_randomColorWithSeedString:string];
 
-    self.image = [self imageSnapshotFromText:[displayString uppercaseString] backgroundColor:backgroundColor circular:isCircular textAttributes:textAttributes];
+    self.image = [[self class] ivl_imageSnapshotFromText:[[self class] ivl_initialsFromString:string]
+                                                    size:self.bounds.size
+                                                circular:isCircular
+                                          textAttributes:textAttributes
+                                         backgroundColor:backgroundColor
+                                             contentMode:self.contentMode];
 }
 
 #pragma mark - Helpers
 
-- (UIFont *)fontForFontName:(NSString *)fontName {
++ (UIFont *)ivl_fontForFontName:(NSString *)fontName size:(CGSize)size {
     
-    CGFloat fontSize = CGRectGetWidth(self.bounds) * kFontResizingProportion;
+    CGFloat fontSize = size.width * kFontResizingProportion;
     if (fontName) {
         return [UIFont fontWithName:fontName size:fontSize];
     }
@@ -106,9 +77,13 @@ static const CGFloat kFontResizingProportion = 0.42f;
     
 }
 
-- (UIColor *)randomColor {
++ (UIColor *)ivl_randomColor {
+    return [self ivl_randomColorWithSeedString:nil];
+}
+
++ (UIColor *)ivl_randomColorWithSeedString:(NSString *)seedString {
     
-    srand48(arc4random());
+    srand48(seedString ? seedString.hash : arc4random());
     
     float red = 0.0;
     while (red < 0.1 || red > 0.84) {
@@ -128,19 +103,73 @@ static const CGFloat kFontResizingProportion = 0.42f;
     return [UIColor colorWithRed:red green:green blue:blue alpha:1.0f];
 }
 
-- (UIImage *)imageSnapshotFromText:(NSString *)text backgroundColor:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes {
-    return [[self class] imageSnapshotFromText:text
-                               backgroundColor:color
-                                      circular:isCircular
-                                textAttributes:textAttributes
-                                        bounds:self.bounds
-                                   contentMode:self.contentMode];
++ (NSString *)ivl_initialsFromString:(NSString *)string {
+    NSMutableString *displayString = [NSMutableString stringWithString:@""];
+
+    NSMutableArray *words = [[string componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] mutableCopy];
+
+    //
+    // Get first letter of the first and last word
+    //
+    if ([words count]) {
+        NSString *firstWord = [words firstObject];
+        if ([firstWord length]) {
+            // Get character range to handle emoji (emojis consist of 2 characters in sequence)
+            NSRange firstLetterRange = [firstWord rangeOfComposedCharacterSequencesForRange:NSMakeRange(0, 1)];
+            [displayString appendString:[firstWord substringWithRange:firstLetterRange]];
+        }
+
+        if ([words count] >= 2) {
+            NSString *lastWord = [words lastObject];
+
+            while ([lastWord length] == 0 && [words count] >= 2) {
+                [words removeLastObject];
+                lastWord = [words lastObject];
+            }
+
+            if ([words count] > 1) {
+                // Get character range to handle emoji (emojis consist of 2 characters in sequence)
+                NSRange lastLetterRange = [lastWord rangeOfComposedCharacterSequencesForRange:NSMakeRange(0, 1)];
+                [displayString appendString:[lastWord substringWithRange:lastLetterRange]];
+            }
+        }
+    }
+    
+    return [displayString uppercaseString];
 }
 
-+ (UIImage *)imageSnapshotFromText:(NSString *)text backgroundColor:(UIColor *)color circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes bounds:(CGRect)bounds contentMode:(UIViewContentMode)contentMode {
++ (NSDictionary *)ivl_defaultTextAttributesForSize:(CGSize)size {
+    return @{
+            NSFontAttributeName : [self ivl_fontForFontName:nil size:size],
+            NSForegroundColorAttributeName : [UIColor whiteColor]
+    };
+}
+
++ (UIImage *)ivl_imageSnapshotWithString:(NSString *)string size:(CGSize)size {
+    return [self ivl_imageSnapshotWithString:string
+                                        size:size
+                                    circular:YES];
+}
+
++ (UIImage *)ivl_imageSnapshotWithString:(NSString *)string size:(CGSize)size circular:(BOOL)isCircular {
+    return [self ivl_imageSnapshotWithString:string
+                                        size:size
+                                    circular:isCircular
+                              textAttributes:[self ivl_defaultTextAttributesForSize:size]];
+}
+
++ (UIImage *)ivl_imageSnapshotWithString:(NSString *)string size:(CGSize)size circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes {
+    return [self ivl_imageSnapshotFromText:[self ivl_initialsFromString:string]
+                                      size:size
+                                  circular:isCircular
+                            textAttributes:textAttributes
+                           backgroundColor:[[self class] ivl_randomColorWithSeedString:string]
+                               contentMode:UIViewContentModeScaleAspectFill];
+}
+
++ (UIImage *)ivl_imageSnapshotFromText:(NSString *)text size:(CGSize)size circular:(BOOL)isCircular textAttributes:(NSDictionary *)textAttributes backgroundColor:(UIColor *)color contentMode:(UIViewContentMode)contentMode {
     CGFloat scale = [UIScreen mainScreen].scale;
     
-    CGSize size = bounds.size;
     if (contentMode == UIViewContentModeScaleToFill ||
         contentMode == UIViewContentModeScaleAspectFill ||
         contentMode == UIViewContentModeScaleAspectFit ||
@@ -153,12 +182,14 @@ static const CGFloat kFontResizingProportion = 0.42f;
     UIGraphicsBeginImageContextWithOptions(size, NO, scale);
     
     CGContextRef context = UIGraphicsGetCurrentContext();
-    
+
+    CGRect rect = CGRectMake(0, 0, size.width, size.height);
+
     if (isCircular) {
         //
         // Clip context to a circle
         //
-        CGPathRef path = CGPathCreateWithEllipseInRect(bounds, NULL);
+        CGPathRef path = CGPathCreateWithEllipseInRect(rect, NULL);
         CGContextAddPath(context, path);
         CGContextClip(context);
         CGPathRelease(path);
@@ -168,15 +199,15 @@ static const CGFloat kFontResizingProportion = 0.42f;
     // Fill background of context
     //
     CGContextSetFillColorWithColor(context, color.CGColor);
-    CGContextFillRect(context, CGRectMake(0, 0, size.width, size.height));
+    CGContextFillRect(context, rect);
     
     //
     // Draw text in the context
     //
     CGSize textSize = [text sizeWithAttributes:textAttributes];
     
-    [text drawInRect:CGRectMake(bounds.size.width/2 - textSize.width/2,
-                                bounds.size.height/2 - textSize.height/2,
+    [text drawInRect:CGRectMake(size.width/2 - textSize.width/2,
+                                size.height/2 - textSize.height/2,
                                 textSize.width,
                                 textSize.height)
       withAttributes:textAttributes];
